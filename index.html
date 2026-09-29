@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas del Imperio Romano - Tour Interactivo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; background: #ecf0f1; overflow: hidden; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        
+        #challenge-panel { position: absolute; top: 15px; left: 15px; z-index: 1000; background: rgba(255, 255, 255, 0.95); width: 350px; padding: 25px 20px 20px; border-radius: 8px; border-left: 5px solid #c0392b; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-height: 85vh; overflow-y: auto; transition: 0.3s; }
+        .close-btn { position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 1.2rem; color: #7f8c8d; background: none; border: none; font-weight: bold; }
+        .close-btn:hover { color: #c0392b; }
+        #reopen-btn { position: absolute; top: 15px; left: 15px; z-index: 999; background: #c0392b; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; }
+        
+        h2 { color: #c0392b; margin-top: 0; font-size: 1.3rem; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        p { font-size: 0.95rem; line-height: 1.5; color: #333; }
+        
+        .btn-action { background: #c0392b; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; transition: 0.3s; display: block; }
+        .btn-action:hover { background: #922b21; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { border: 1px solid #bdc3c7; padding: 6px; text-align: left; }
+        th { background-color: #c0392b; color: white; }
+
+        .custom-popup h3 { color: #c0392b; margin: 0 0 5px 0; font-size: 1.2rem; }
+        
+        .marker-icon { background: #c0392b; color: white; border-radius: 50%; text-align: center; line-height: 24px; border: 2px solid gold; font-weight: bold; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <button id="reopen-btn" onclick="togglePanel(true)">🚩 Abrir Tour</button>
+
+    <div id="challenge-panel">
+        <button class="close-btn" onclick="togglePanel(false)">✖</button>
+        <div id="tour-content">
+            <h2>El Gran Tour Imperial</h2>
+            <p>Los romanos conquistaron el mundo construyendo las mismas infraestructuras en todas partes. Vamos a hacer un <strong>Tour de 20 paradas</strong> desde nuestra Bética hasta los confines del mundo romano para recabar la información necesaria para el reto final.</p>
+            <p>¡Toma buena nota de lo que descubras!</p>
+            <button class="btn-action" onclick="startTour()">🚁 Empezar Gran Tour Guiado</button>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        const map = L.map('map').setView([37.5, -4.5], 6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+
+        function togglePanel(show) {
+            document.getElementById('challenge-panel').style.display = show ? 'block' : 'none';
+            document.getElementById('reopen-btn').style.display = show ? 'none' : 'block';
+        }
+
+        let currentStep = 0;
+        const tourSteps = [
+            { coords: [37.4430, -6.0450], zoom: 14, title: "1. Itálica (Bética)", info: "Comenzamos en la Bética (Andalucía). Itálica fue la primera ciudad romana en Hispania y cuna de grandes emperadores como Trajano y Adriano." },
+            { coords: [36.0883, -5.7744], zoom: 15, title: "2. Baelo Claudia (Cádiz)", info: "Ciudad costera de espectacular belleza. Desde aquí se producía y exportaba una famosa y cotizada salsa de pescado llamada Garum." },
+            { coords: [36.5292, -6.2936], zoom: 14, title: "3. Teatro de Gades (Cádiz)", info: "Aquí encontramos el teatro romano más antiguo de Hispania. Muy cerca se encontraba el famoso templo a Hércules (el Melkart fenicio)." },
+            { coords: [37.4725, -5.6369], zoom: 14, title: "4. Necrópolis de Carmona", info: "Impresionantes tumbas talladas en la roca. Por razones de higiene y religiosas, la ley obligaba a ubicar las necrópolis fuera de las murallas, junto a los caminos." },
+            { coords: [37.8761, -4.7794], zoom: 15, title: "5. Córdoba (Corduba)", info: "Capital de la Bética. Su gran puente de 16 arcos cruza el río Guadalquivir (antiguo Baetis), que era vital para el transporte de aceite hacia Roma." },
+            { coords: [36.7325, -3.6917], zoom: 14, title: "6. Acueducto de Almuñécar", info: "Una obra de ingeniería imprescindible. Los romanos lograban que el agua se moviera decenas de kilómetros por pura gravedad, manteniendo una pendiente constante." },
+            { coords: [36.7214, -4.4169], zoom: 15, title: "7. Teatro de Málaga (Malaca)", info: "Situado a los pies de la Alcazaba. Todos los teatros romanos comparten una característica común: la planta de sus gradas tiene forma semicircular." },
+            { coords: [38.9151, -6.3453], zoom: 14, title: "8. Emérita Augusta (Mérida)", info: "Dejamos la Bética y entramos en Lusitania. Aquí destacan el Teatro, el Anfiteatro y el enorme Circo, destinado a las peligrosas carreras de cuadrigas." },
+            { coords: [40.9481, -4.1183], zoom: 14, title: "9. Acueducto de Segovia", info: "Subimos al centro de la península. Este icónico acueducto tiene 167 arcos de granito que se sostienen por puro equilibrio, sin usar ningún tipo de cemento o argamasa." },
+            { coords: [42.4608, -6.7600], zoom: 13, title: "10. Las Médulas (León)", info: "Un paisaje marciano creado por la ingeniería romana. Utilizaban la fuerza del agua para derrumbar montañas enteras (Ruina Montium) y extraer oro masivamente." },
+            { coords: [43.3859, -8.4065], zoom: 14, title: "11. Torre de Hércules (Galicia)", info: "Hemos llegado al extremo noroeste de Hispania. Esta monumental torre es el único faro romano del mundo que sigue en funcionamiento." },
+            { coords: [41.1147, 1.2594], zoom: 14, title: "12. Tarraco (Tarragona)", info: "Viajamos a la costa mediterránea. Su imponente anfiteatro está junto al mar, el lugar donde gladiadores y fieras salvajes luchaban a muerte como espectáculo." },
+            { coords: [43.9476, 4.5349], zoom: 14, title: "13. Pont du Gard (Francia)", info: "Cruzamos los Pirineos hacia la Galia. Este acueducto de tres niveles es el triunfo perfecto del arco de medio punto romano." },
+            { coords: [41.8902, 12.4922], zoom: 15, title: "14. El Coliseo (Roma)", info: "¡Llegamos al corazón del Imperio! Para proteger al público del sol abrasador, los marineros desplegaban un inmenso toldo de lona llamado Velario." },
+            { coords: [41.8986, 12.4769], zoom: 16, title: "15. El Panteón (Roma)", info: "El edificio romano mejor conservado, coronado por una cúpula colosal de hormigón. Su nombre indica que estaba dedicado a todos los dioses de Roma." },
+            { coords: [40.7499, 14.4876], zoom: 14, title: "16. Pompeya (Italia)", info: "Una ciudad congelada en el tiempo por la erupción del volcán Vesubio en el año 79 d.C., dejándonos una cápsula intacta de la vida romana." },
+            { coords: [43.5081, 16.4402], zoom: 15, title: "17. Palacio de Diocleciano", info: "Saltamos al mar Adriático (Croacia). El emperador Diocleciano construyó este enorme palacio-fortaleza con un propósito inusual: jubilarse y retirarse del poder." },
+            { coords: [37.9396, 27.3408], zoom: 15, title: "18. Biblioteca de Celso", info: "En Éfeso (Turquía). En el mundo romano clásico, los libros no tenían hojas encuadernadas; eran grandes rollos de papiro o pergamino." },
+            { coords: [32.6396, 14.2903], zoom: 14, title: "19. Leptis Magna (Libia)", info: "Cruzamos al norte de África. Hoy está rodeada de desierto, pero en la época de esplendor de la ciudad, el clima de esta región era mucho más fértil y verde." },
+            { coords: [55.0152, -2.2934], zoom: 12, title: "20. Muro de Adriano", info: "Terminamos en la fría frontera norte. Este muro de 117 km en Britania separaba la civilización romana de las tribus de los pictos (en la actual Escocia)." }
+        ];
+
+        function startTour() { currentStep = 0; renderStep(); }
+
+        function renderStep() {
+            if(currentStep >= tourSteps.length) { showEndScreen(); return; }
+            let step = tourSteps[currentStep];
+            map.flyTo(step.coords, step.zoom, { duration: 2.5 });
+            
+            let html = `<h2>${step.title}</h2><p>${step.info}</p>`;
+            html += `<button class="btn-action" onclick="nextStep()">Siguiente Parada ➡️</button>`;
+            document.getElementById('tour-content').innerHTML = html;
+        }
+
+        function nextStep() {
+            currentStep++;
+            renderStep();
+        }
+
+        function showEndScreen() {
+            document.getElementById('tour-content').innerHTML = `
+                <h2>🎉 ¡Gran Tour Imperial Completado!</h2>
+                <p>Has recorrido todo el Imperio y recopilado los datos. Ahora estás listo para enfrentarte al cuestionario en la lección.</p>
+                <table>
+                    <tr><th>Tipo</th><th>Ejemplos</th></tr>
+                    <tr><td><strong>Ocio</strong></td><td>Teatros, Anfiteatros, Circos.</td></tr>
+                    <tr><td><strong>Ingeniería</strong></td><td>Acueductos, Puentes, Calzadas.</td></tr>
+                    <tr><td><strong>Religión/Política</strong></td><td>Templos, Foros, Basílicas.</td></tr>
+                    <tr><td><strong>Militar</strong></td><td>Murallas, Muros Fronterizos.</td></tr>
+                </table>
+                <button class="btn-action" onclick="map.setView([37.5, -4.5], 6); togglePanel(false);">Explorar libremente el mapa</button>
+            `;
+        }
+
+        const sites = tourSteps.map(step => ({ lat: step.coords[0], lng: step.coords[1], title: step.title, desc: step.info }));
+
+        sites.forEach(item => {
+            const icon = L.divIcon({ className: '', html: `<div class='marker-icon'>🏛️</div>`, iconSize: [24,24] });
+            const popup = `<div class="custom-popup"><h3>${item.title}</h3><p>${item.desc}</p></div>`;
+            L.marker([item.lat, item.lng], {icon: icon}).addTo(map).bindPopup(popup);
+        });
+    </script>
+</body>
+</html>
