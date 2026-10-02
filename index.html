@@ -47,7 +47,12 @@
 
     <script>
         const map = L.map('map').setView([37.5, -4.5], 6);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+        
+        // ESTA ES LA LÍNEA SOLUCIONADA: Servidor oficial de OpenStreetMap, sin API Keys.
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
 
         function togglePanel(show) {
             document.getElementById('challenge-panel').style.display = show ? 'block' : 'none';
@@ -113,7 +118,7 @@
         const sites = tourSteps.map(step => ({ lat: step.coords[0], lng: step.coords[1], title: step.title, desc: step.info }));
 
         sites.forEach(item => {
-            const icon = L.divIcon({ className: '', html: `<div class='marker-icon'>🏛️</div>`, iconSize: [24,24] });
+            const icon = L.divIcon({ className: '', html: `<div class='marker-icon'>🏛️️</div>`, iconSize: [24,24] });
             const popup = `<div class="custom-popup"><h3>${item.title}</h3><p>${item.desc}</p></div>`;
             L.marker([item.lat, item.lng], {icon: icon}).addTo(map).bindPopup(popup);
         });
